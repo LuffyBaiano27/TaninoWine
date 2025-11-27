@@ -24,4 +24,4 @@ Este aplicativo está sendo desenvolvido como parte do curso de **Análise e Des
 * Simulação de Pagamento e Pedido
 
 ---
-*Projeto criado com ❤️ e muito café (e vinho!)* 🍷
+*Projeto criado com muito Energético e no caso de taiane vinho kkkk!* 🍷

@@ -1,0 +1,12 @@
+/build
+/.dart_tool
+/.idea
+.flutter-plugins
+.flutter-plugins-dependencies
+.metadata
+.packages
+/android/.gradle
+/android/app/build
+/ios/.symlinks
+/ios/Pods
+pubspec.lock

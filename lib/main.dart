@@ -484,6 +484,21 @@ class _CatalogScreenState extends State<CatalogScreen> {
               child: ListView(
                 padding: const EdgeInsets.all(20),
                 children: [
+                  // --- INÍCIO DO CÓDIGO NOVO ---
+                  ListTile(
+                    contentPadding: EdgeInsets.zero, // Remove espaço extra
+                    leading: const Icon(Icons.person, color: Colors.white, size: 28),
+                    title: Text("Minha Conta", style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                    subtitle: Text("Ver perfil e histórico", style: GoogleFonts.poppins(color: Colors.white54, fontSize: 12)),
+                    trailing: const Icon(Icons.arrow_forward_ios, color: Colors.white24, size: 14),
+                    onTap: () {
+                      Navigator.pop(context); // Fecha o menu lateral
+                      // Navega para a tela de Perfil
+                      Navigator.push(context, MaterialPageRoute(builder: (context) => const ProfileScreen()));
+                    },
+                  ),
+                  const Divider(color: Colors.white24, height: 30), // Linha divisória elegante
+
                   // Busca por Nome
                   Text("Pesquisar Nome", style: GoogleFonts.poppins(color: Colors.white70, fontSize: 12)),
                   const SizedBox(height: 5),
@@ -708,16 +723,23 @@ class _AdminAddWineScreenState extends State<AdminAddWineScreen> {
 }
 
 // ==========================================
-// TELA 5: PRODUCT DETAIL
+// TELA 5: PRODUCT DETAIL (COM AVALIAÇÕES)
 // ==========================================
 class ProductDetailScreen extends StatelessWidget {
   final Map<String, dynamic> wine;
   const ProductDetailScreen({super.key, required this.wine});
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: AppBar(backgroundColor: Colors.white, elevation: 0, leading: const BackButton(color: Colors.black), centerTitle: true, title: Text("TaninoWine", style: GoogleFonts.montserrat(color: Colors.black, fontWeight: FontWeight.w300)), actions: [IconButton(icon: const Icon(Icons.shopping_cart, color: Colors.black), onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const CartScreen()))) ]),
+      appBar: AppBar(
+        backgroundColor: Colors.white, elevation: 0,
+        leading: IconButton(icon: const Icon(Icons.arrow_back_ios, color: Colors.black), onPressed: () => Navigator.pop(context)),
+        centerTitle: true,
+        title: Text("TaninoWine", style: GoogleFonts.montserrat(color: Colors.black, fontWeight: FontWeight.w300)),
+        actions: [IconButton(icon: const Icon(Icons.shopping_cart, color: Colors.black), onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const CartScreen())))],
+      ),
       body: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 500),
@@ -743,11 +765,31 @@ class ProductDetailScreen extends StatelessWidget {
                     Positioned(
                       right: 20, top: 20,
                       child: Column(
-                        children: [
-                          _InfoBadge(image: wine['flag'], label: wine['origin']), 
-                          const SizedBox(height: 15), const _InfoBadge(icon: Icons.wine_bar, label: "Tinto", color: Colors.purple), 
-                          const SizedBox(height: 15), _InfoBadge(icon: Icons.grain, label: wine['grapes'], color: Colors.grey), 
-                          const SizedBox(height: 15), const _InfoBadge(icon: Icons.local_drink, label: "750ml", color: Colors.black),
+                      children: [
+                      // 1. Bandeira e País (Dinâmico: SEM const)
+                          _InfoBadge(
+                           image: wine['flag']?.toString(), 
+                          label: wine['origin'].toString()
+                                    ),
+                        
+                          const SizedBox(height: 15),
+                          
+                          // 2. Tipo Tinto (Fixo: COM const)
+                          const _InfoBadge(icon: Icons.wine_bar, label: "Tinto", color: Colors.purple),
+                          
+                          const SizedBox(height: 15),
+                          
+                          // 3. Uva (Dinâmico: SEM const)
+                          _InfoBadge(
+                            icon: Icons.grain, 
+                            label: wine['grapes']?.toString() ?? "Uvas", 
+                            color: Colors.grey
+                          ),
+                          
+                          const SizedBox(height: 15),
+                          
+                          // 4. Tamanho (Fixo: COM const)
+                          const _InfoBadge(icon: Icons.local_drink, label: "750ml", color: Colors.black),
                         ],
                       ),
                     )
@@ -764,11 +806,42 @@ class ProductDetailScreen extends StatelessWidget {
                       children: [
                         Text(wine['name'], style: GoogleFonts.poppins(fontSize: 32, fontWeight: FontWeight.bold, color: Colors.black, shadows: [Shadow(color: Colors.black38, offset: const Offset(2, 2), blurRadius: 4)])),
                         const SizedBox(height: 15),
+                        
+                        // DESCRIÇÃO
                         Container(
                           padding: const EdgeInsets.all(15),
                           decoration: BoxDecoration(color: const Color(0xFFF5F5F5), border: Border.all(color: Colors.grey.shade400, width: 1.5), borderRadius: BorderRadius.circular(15)),
                           child: Text(wine['desc'], textAlign: TextAlign.justify, style: GoogleFonts.poppins(fontSize: 13, color: Colors.grey[800], height: 1.6)),
                         ),
+                        
+                        const SizedBox(height: 30),
+                        
+                        // --- SEÇÃO DE AVALIAÇÕES (NOVO!) ---
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text("Avaliações (4.8)", style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87)),
+                            Text("Ver tudo", style: GoogleFonts.poppins(fontSize: 12, color: const Color(0xFF800020), fontWeight: FontWeight.w600)),
+                          ],
+                        ),
+                        const SizedBox(height: 15),
+                        
+                        // Card de Avaliação 1
+                        _ReviewCard(
+                          name: "Carlos Mendes",
+                          stars: 5,
+                          comment: "Vinho espetacular! Encorpado e desce redondo. Chegou super rápido.",
+                          date: "2 dias atrás",
+                        ),
+                        
+                        // Card de Avaliação 2
+                        _ReviewCard(
+                          name: "Fernanda Souza",
+                          stars: 4,
+                          comment: "Ótimo custo benefício, mas recomendo deixar respirar um pouco antes de servir.",
+                          date: "1 semana atrás",
+                        ),
+                        
                         const SizedBox(height: 30),
                       ],
                     ),
@@ -784,12 +857,49 @@ class ProductDetailScreen extends StatelessWidget {
   }
 }
 
-class _InfoBadge extends StatelessWidget {
-  final String? image; final IconData? icon; final String label; final Color? color;
-  const _InfoBadge({this.image, this.icon, required this.label, this.color});
+// Widget Auxiliar para o Card de Comentário
+class _ReviewCard extends StatelessWidget {
+  final String name;
+  final int stars;
+  final String comment;
+  final String date;
+
+  const _ReviewCard({required this.name, required this.stars, required this.comment, required this.date});
+
   @override
   Widget build(BuildContext context) {
-    return Column(children: [Container(width: 40, height: 40, decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: Colors.grey.shade300)), child: image != null ? ClipOval(child: Image.network(image!, fit: BoxFit.cover, errorBuilder: (c,e,s) => const Icon(Icons.public, color: Colors.grey))) : Icon(icon, color: color, size: 20)), const SizedBox(height: 4), Text(label, style: GoogleFonts.poppins(fontSize: 9, color: Colors.black87, fontWeight: FontWeight.w500), textAlign: TextAlign.center)]);
+    return Container(
+      margin: const EdgeInsets.only(bottom: 15),
+      padding: const EdgeInsets.all(15),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(15),
+        border: Border.all(color: Colors.grey.shade200),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 5, offset: const Offset(0, 2))],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(name, style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 14)),
+              Text(date, style: GoogleFonts.poppins(color: Colors.grey, fontSize: 10)),
+            ],
+          ),
+          const SizedBox(height: 5),
+          Row(
+            children: List.generate(5, (index) => Icon(
+              index < stars ? Icons.star : Icons.star_border,
+              size: 16,
+              color: Colors.amber,
+            )),
+          ),
+          const SizedBox(height: 8),
+          Text(comment, style: GoogleFonts.poppins(fontSize: 12, color: Colors.black87)),
+        ],
+      ),
+    );
   }
 }
 
@@ -981,6 +1091,226 @@ class OrderSuccessScreen extends StatelessWidget {
           )
         ],
       ),
+    );
+  }
+}
+// ==========================================
+// TELA 9: PERFIL DO USUÁRIO (PROFILE SCREEN)
+// ==========================================
+class ProfileScreen extends StatelessWidget {
+  const ProfileScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    // Dados Mockados (Falsos) para simulação
+    final String userName = SessionService.isAdmin ? "Luffy (Admin)" : "Visitante";
+    final String userEmail = SessionService.isAdmin ? "rei_dos_piratas@tanino.com" : "cliente@email.com";
+    
+    return Scaffold(
+      extendBodyBehindAppBar: true,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: Text("Meu Perfil", style: GoogleFonts.greatVibes(fontSize: 30, color: Colors.white)),
+        centerTitle: true,
+      ),
+      body: Stack(
+        children: [
+          // 1. Fundo
+          Container(
+            height: double.infinity,
+            decoration: const BoxDecoration(
+              image: DecorationImage(
+                image: AssetImage('assets/bg_home.jpg'), // Usando o fundo da adega
+                fit: BoxFit.cover,
+              ),
+            ),
+            child: Container(color: Colors.black.withOpacity(0.8)), // Bem escuro
+          ),
+
+          // 2. Conteúdo
+          SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 100),
+            child: Column(
+              children: [
+                // FOTO DE PERFIL
+                Container(
+                  padding: const EdgeInsets.all(4), // Borda branca
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                  ),
+                  child: CircleAvatar(
+                    radius: 60,
+                    backgroundImage: NetworkImage(
+                      SessionService.isAdmin 
+                      ? "https://i.pinimg.com/736x/ea/58/13/ea58133bb7a0497fa97607730d47343e.jpg" // Foto do Luffy
+                      : "https://cdn-icons-png.flaticon.com/512/3135/3135715.png" // Avatar Genérico
+                    ), 
+                  ),
+                ),
+                const SizedBox(height: 15),
+                
+                // NOME E EMAIL
+                Text(userName, style: GoogleFonts.poppins(fontSize: 22, color: Colors.white, fontWeight: FontWeight.bold)),
+                Text(userEmail, style: GoogleFonts.poppins(fontSize: 14, color: Colors.white54)),
+                
+                const SizedBox(height: 40),
+
+                // SEÇÃO: ÚLTIMO PEDIDO
+                Align(alignment: Alignment.centerLeft, child: Text("Último Vinho Comprado", style: GoogleFonts.poppins(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600))),
+                const SizedBox(height: 10),
+                _ProfileCard(
+                  title: "Barca Velha 2011",
+                  subtitle: "Entregue em 25/11/2025",
+                  image: "https://garrafeiranacional.com/media/catalog/product/cache/1/image/9df78eab33525d08d6e5fb8d27136e95/3/0/3010185.png",
+                  status: "Entregue",
+                  statusColor: Colors.greenAccent,
+                ),
+
+                const SizedBox(height: 25),
+
+                // SEÇÃO: VINHO FAVORITO
+                Align(alignment: Alignment.centerLeft, child: Text("Favorito da Adega", style: GoogleFonts.poppins(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600))),
+                const SizedBox(height: 10),
+                _ProfileCard(
+                  title: "Catena Zapata",
+                  subtitle: "Malbec Argentino",
+                  image: "https://images.vivino.com/thumbs/f_282x3hTi2s1h8oX1_SJA_pb_x960.png",
+                  status: "❤ Favorito",
+                  statusColor: Colors.redAccent,
+                ),
+
+                const SizedBox(height: 40),
+
+                // BOTÃO SAIR
+                SizedBox(
+                  width: double.infinity,
+                  height: 50,
+                  child: OutlinedButton.icon(
+                    onPressed: () {
+                      CartService.clearCart();
+                      Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (context) => const WelcomeScreen()), (route) => false);
+                    },
+                    icon: const Icon(Icons.logout, color: Colors.white70),
+                    label: Text("SAIR DA CONTA", style: GoogleFonts.poppins(color: Colors.white70, fontWeight: FontWeight.bold)),
+                    style: OutlinedButton.styleFrom(side: const BorderSide(color: Colors.white24), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30))),
+                  ),
+                )
+              ],
+            ),
+          )
+        ],
+      ),
+    );
+  }
+}
+
+// Card Pequeno para o Perfil
+class _ProfileCard extends StatelessWidget {
+  final String title;
+  final String subtitle;
+  final String image;
+  final String status;
+  final Color statusColor;
+
+  const _ProfileCard({required this.title, required this.subtitle, required this.image, required this.status, required this.statusColor});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(15),
+        border: Border.all(color: Colors.white10),
+      ),
+      child: Row(
+        children: [
+          // Imagem
+          Container(
+            width: 50, height: 70,
+            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(10)),
+            child: Image.network(image, fit: BoxFit.contain),
+          ),
+          const SizedBox(width: 15),
+          // Textos
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15)),
+                Text(subtitle, style: GoogleFonts.poppins(color: Colors.white70, fontSize: 12)),
+              ],
+            ),
+          ),
+          // Status (Badge)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+            decoration: BoxDecoration(
+              color: statusColor.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: statusColor.withOpacity(0.5))
+            ),
+            child: Text(status, style: TextStyle(color: statusColor, fontSize: 10, fontWeight: FontWeight.bold)),
+          )
+        ],
+      ),
+    );
+  }
+}
+// ==========================================
+// WIDGET AUXILIAR: INFO BADGE (Bolinhas laterais)
+// ==========================================
+class _InfoBadge extends StatelessWidget {
+  final String? image;
+  final IconData? icon;
+  final String label;
+  final Color? color;
+
+  const _InfoBadge({
+    this.image, 
+    this.icon, 
+    required this.label, 
+    this.color
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            border: Border.all(color: Colors.grey.shade300),
+          ),
+          child: image != null
+              ? ClipOval(
+                  child: Image.network(
+                    image!, 
+                    fit: BoxFit.cover, 
+                    errorBuilder: (c,e,s) => const Icon(Icons.public, color: Colors.grey)
+                  ),
+                )
+              : Icon(icon, color: color, size: 20),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: GoogleFonts.poppins(
+            fontSize: 9, 
+            color: Colors.black87, 
+            fontWeight: FontWeight.w500
+          ),
+          textAlign: TextAlign.center,
+        )
+      ],
     );
   }
 }

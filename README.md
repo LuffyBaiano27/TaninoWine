@@ -16,19 +16,44 @@ Este aplicativo está sendo desenvolvido como parte do curso de **Análise e Des
 
 ---
 
-### 🚀 Funcionalidades & Recursos
+### 🚀 Funcionalidades & Recursos Implementados
 
 #### 📱 Experiência do Usuário
 * **Catálogo Premium:** Interface visual rica com detalhes dos rótulos.
 * **Filtros Avançados:** Sistema de busca inteligente com modal para filtrar por **Categoria, Uva, País e Nome** simultaneamente.
-* **Carrinho de Compras:** Gestão de itens e cálculo automático de total.
-* **Perfil de Usuário:** Gestão de conta e personalização com foto de perfil.
+* **Carrinho de Compras:** Gestão de itens, cálculo de total e seleção de método de pagamento (Pix, Cartão, Boleto).
+* **Perfil de Usuário:** Gestão de conta, edição de endereço de entrega e visualização de histórico.
+* **Rastreamento de Pedidos:** Timeline visual com status do pedido (Aguardando → Entregue).
 * **Avaliações:** Sistema para avaliar e visualizar notas dos vinhos.
 
 #### 🛠️ Back-end & Admin
-* **Integração Firebase:** Dados do catálogo sincronizados em tempo real (Firestore).
+* **Integração Firebase:** Dados do catálogo e pedidos sincronizados em tempo real (Firestore).
+* **Autenticação:** Login e Cadastro via E-mail/Senha com persistência de sessão.
 * **Modo Administrador:** Painel exclusivo para adicionar e excluir vinhos do catálogo diretamente pelo app.
-* **Gestão de Mídia:** Upload e exibição de imagens dos produtos.
+
+---
+
+### 🗺️ Roadmap (Checklist de Melhorias)
+
+Abaixo, a lista de funcionalidades planejadas para as próximas versões (Beta e Release):
+
+#### 🔐 Autenticação & Segurança
+- [ ] Implementar **Login com Google**.
+- [ ] Remover Login com Facebook (Depreciado).
+- [ ] **Bloqueio de Visitantes:** Restringir a finalização de compra apenas para usuários logados.
+- [ ] **Verificação de Idade:** Garantir que o usuário seja maior de 18 anos no cadastro.
+
+#### 👤 Perfil & Mídia
+- [ ] **Upload de Imagens:** Permitir que o usuário envie foto da galeria (Firebase Storage) na criação e edição de perfil.
+
+#### 💳 Financeiro & Logística
+- [ ] **Pagamento Real:** Integração com Gateway de Pagamento (API Bancária) para transações reais.
+- [ ] **Rastreamento GPS:** Link para mapa acompanhando a entrega em tempo real.
+- [ ] **Previsão de Entrega:** Cálculo de frete e prazo baseado no CEP.
+
+#### 📢 Lançamento
+- [ ] **Povoamento do Banco:** Inserir catálogo completo de vinhos reais.
+- [ ] **Deploy:** Hospedagem do APK para download da versão Beta.
 
 ---
 
@@ -36,7 +61,13 @@ Este aplicativo está sendo desenvolvido como parte do curso de **Análise e Des
 * **Flutter** (Framework UI)
 * **Dart** (Linguagem)
 * **Firebase Firestore** (Banco de Dados NoSQL)
+* **Firebase Auth** (Autenticação)
 * **Provider** (Gerenciamento de Estado)
+
+---
+
+### 🔞 Aviso Legal
+> *O consumo de bebidas alcoólicas é proibido para menores de 18 anos. Beba com moderação.*
 
 ---
 

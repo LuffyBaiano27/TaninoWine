@@ -1,33 +1,53 @@
-/.idea
-.metadata
-/android/.gradle
-/android/app/build
-/ios/.symlinks
-/ios/Pods
-pubspec.lock
-
-# Arquivos do Flutter/Dart (Obrigatório ignorar)
-/build/
+# =========================
+# FLUTTER & DART (Padrão)
+# =========================
 .dart_tool/
 .flutter-plugins
 .flutter-plugins-dependencies
 .packages
 .pub-cache/
 .pub/
+/build/
 
-# Arquivos de IDE (Obrigatório ignorar para não dar conflito com o PC do seu amigo)
+# =========================
+# ANDROID (Build e Config Local)
+# =========================
+/android/.gradle
+/android/app/build
+/android/local.properties
+/android/key.properties
+/android/*.keystore
+
+# =========================
+# IOS (Build e Dependências)
+# =========================
+/ios/.symlinks
+/ios/Pods
+/ios/Flutter/Generated.xcconfig
+/ios/Flutter/flutter_export_environment.sh
+
+# =========================
+# IDEs & EDITORES
+# =========================
 .idea/
 .vscode/
 *.iml
 *.ipr
 *.iws
+.metadata
 
-# Arquivos do Mac e Windows (Lixo do sistema)
+# =========================
+# SISTEMA OPERACIONAL (Lixo)
+# =========================
 .DS_Store
 Thumbs.db
+ehthumbs.db
+Desktop.ini
 
-# --- FIREBASE E SEGURANÇA ---
-
+# =========================
+# FIREBASE & SEGURANÇA 🔒
+# =========================
+# Impede o vazamento de chaves de API e configs do projeto
 android/app/google-services.json
 ios/Runner/GoogleService-Info.plist
 lib/firebase_options.dart

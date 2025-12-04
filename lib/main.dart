@@ -5,7 +5,9 @@ import 'dart:ui';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'firebase_options.dart'; // Certifique-se que este arquivo existe (gerado pelo flutterfire configure)
+import 'firebase_options.dart'; // Certifique-se que este arquivo existe
+import 'package:taninowine/screens/order_details_screen.dart'; // Import da tela de detalhes
+import 'package:taninowine/screens/edit_profile_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -28,7 +30,7 @@ class TaninoWineApp extends StatelessWidget {
         primaryColor: const Color(0xFF800020),
         useMaterial3: true,
         colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF800020), 
+          seedColor: const Color(0xFF800020),
           brightness: Brightness.dark,
           primary: const Color(0xFF800020)
         ),
@@ -49,11 +51,10 @@ class SessionService {
 // SERVIÇO DE VINHOS (FIREBASE + LOGICA LOCAL)
 // ==========================================
 class WineService {
-  // Conexão com a coleção 'wines' no Firestore
   static final CollectionReference winesCollection = FirebaseFirestore.instance.collection('wines');
 
   static Future<void> addWine(Map<String, dynamic> newWine) async {
-    newWine['reviews'] = []; // Garante lista vazia
+    newWine['reviews'] = []; 
     await winesCollection.add(newWine);
   }
 
@@ -67,7 +68,6 @@ class WineService {
     });
   }
 
-  // Mapa de Bandeiras Inteligente
   static final Map<String, String> _flagMap = {
     "brasil": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/05/Flag_of_Brazil.svg/256px-Flag_of_Brazil.svg.png",
     "brazil": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/05/Flag_of_Brazil.svg/256px-Flag_of_Brazil.svg.png",
@@ -90,7 +90,7 @@ class WineService {
 }
 
 // ==========================================
-// SERVIÇO DE CARRINHO (AGORA SALVA PEDIDOS NA NUVEM ☁️)
+// SERVIÇO DE CARRINHO (CORRIGIDO PARA RECEBER O PAGAMENTO)
 // ==========================================
 class CartService {
   static List<Map<String, dynamic>> items = [];
@@ -100,7 +100,6 @@ class CartService {
     if (index >= 0) {
       items[index]['qty']++;
     } else {
-      // Criamos uma cópia limpa dos dados para salvar no pedido
       Map<String, dynamic> newItem = {
         'name': wine['name'],
         'price': wine['price'],
@@ -134,21 +133,24 @@ class CartService {
     items.clear();
   }
 
-  // --- NOVA FUNÇÃO: SALVAR PEDIDO NO FIREBASE ---
-  static Future<void> saveOrder() async {
+  // --- ATUALIZAÇÃO AQUI ---
+  // Agora aceita o 'method' vindo da tela de pagamento
+  static Future<void> saveOrder([String method = "Cartão de Crédito"]) async {
     User? user = FirebaseAuth.instance.currentUser;
     if (user == null || items.isEmpty) return;
 
     await FirebaseFirestore.instance.collection('orders').add({
-      'userId': user.uid, // Para sabermos de quem é o pedido
+      'userId': user.uid,
       'userEmail': user.email,
       'total': getTotal(),
-      'date': FieldValue.serverTimestamp(), // Hora exata do servidor
-      'status': 'Em preparação', // Status inicial
-      'items': items, // A lista de vinhos
+      'date': FieldValue.serverTimestamp(),
+      'status': 'Aguardando Pagamento',
+      'items': items,
+      'address': 'Rua dos Vinhos, 123 - Salvador, BA', // Placeholder (Futuramente puxar do perfil)
+      'paymentMethod': method, // <--- AGORA SALVA O QUE VOCÊ ESCOLHEU (Pix, Boleto...)
     });
     
-    clearCart(); // Limpa o carrinho DEPOIS de salvar
+    clearCart();
   }
 }
 
@@ -183,8 +185,8 @@ class WelcomeScreen extends StatelessWidget {
                       SizedBox(width: double.infinity, height: 50, child: OutlinedButton(onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const SignupScreen())), style: OutlinedButton.styleFrom(side: const BorderSide(color: Colors.white, width: 1.5), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)), backgroundColor: Colors.white.withOpacity(0.05)), child: Text("CRIAR MINHA CONTA", style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)))),
                       const SizedBox(height: 15),
                       TextButton(onPressed: () {
-                         SessionService.isAdmin = false;
-                         Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (context) => const CatalogScreen()), (route) => false);
+                          SessionService.isAdmin = false;
+                          Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (context) => const CatalogScreen()), (route) => false);
                       }, child: Text("Entrar como visitante", style: GoogleFonts.poppins(color: Colors.white70, decoration: TextDecoration.underline, decorationColor: Colors.white70)))
                     ],
                   ),
@@ -217,7 +219,6 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _isLoading = true);
     try {
       await FirebaseAuth.instance.signInWithEmailAndPassword(email: _userController.text.trim(), password: _passController.text.trim());
-      // Admin check
       if (_userController.text.trim() == "luffy@tanino.com") {
         SessionService.isAdmin = true;
         if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Bem-vindo, Chefe Luffy! 🍷"), backgroundColor: Color(0xFF800020)));
@@ -346,7 +347,7 @@ class _SignupScreenState extends State<SignupScreen> {
 }
 
 // ==========================================
-// TELA 4: CATALOG SCREEN (VERSÃO FINAL COM MODAL DE FILTROS)
+// TELA 4: CATALOG SCREEN (VERSÃO FINAL COM MODAL DE FILTROS + LOGOUT)
 // ==========================================
 
 class CatalogScreen extends StatefulWidget {
@@ -540,12 +541,34 @@ class _CatalogScreenState extends State<CatalogScreen> {
         title: Text("TaninoWine", style: GoogleFonts.montserrat(color: Colors.white, fontWeight: FontWeight.w300)),
         leading: Builder(builder: (context) => IconButton(icon: const Icon(Icons.menu, color: Colors.white), onPressed: () => Scaffold.of(context).openDrawer())),
         actions: [
-          // ÍCONE DE FILTRO (NOVO)
+          // --- 1. BOTÃO DE SAIR (ATUALIZADO COM LOGOUT REAL) ---
           IconButton(
-            icon: const Icon(Icons.tune, color: Colors.amber), // Ícone de sliders
-            tooltip: "Filtrar",
-            onPressed: _showFilterModal, // Abre a aba de filtros
+            icon: const Icon(Icons.exit_to_app, color: Colors.white),
+            tooltip: "Sair",
+            onPressed: () async {
+              // Faz o logout do Firebase
+              await FirebaseAuth.instance.signOut();
+              // Limpa o carrinho
+              CartService.clearCart();
+              // Volta para a tela inicial
+              if (context.mounted) {
+                Navigator.pushAndRemoveUntil(
+                  context, 
+                  MaterialPageRoute(builder: (context) => const WelcomeScreen()), 
+                  (route) => false
+                );
+              }
+            },
           ),
+          
+          // --- 2. BOTÃO DE FILTRO ---
+          IconButton(
+            icon: const Icon(Icons.tune, color: Colors.amber), 
+            tooltip: "Filtrar",
+            onPressed: _showFilterModal, 
+          ),
+
+          // --- 3. BOTÃO DE CARRINHO ---
           Padding(
             padding: const EdgeInsets.only(right: 10.0),
             child: IconButton(
@@ -655,7 +678,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
                       // 2. Filtro de Categoria
                       final matchesCategory = _selectedCategory == "Todos" || (wineData['type'] ?? "").toString() == _selectedCategory;
 
-                      // 3. Filtro de Uva (Verifica campo 'grapes' no banco)
+                      // 3. Filtro de Uva (Verifica campo 'grapes' plural ou 'grape' singular)
                       final matchesGrape = _selectedGrape == "Todas" || ((wineData['grapes'] ?? wineData['grape'] ?? "")).toString() == _selectedGrape;
 
                       // 4. Filtro de País (Verifica dentro de 'origin')
@@ -768,59 +791,6 @@ class _CatalogScreenState extends State<CatalogScreen> {
   }
 }
 
-// O CARD DE VINHO (Pode manter o mesmo, mas incluí aqui para garantir que não falta nada)
-class _WineCard extends StatelessWidget {
-  final Map<String, dynamic> wine;
-  const _WineCard({required this.wine});
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: const Color(0xFF1E1E1E),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withOpacity(0.05)),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.5), blurRadius: 8, offset: const Offset(0, 4))]
-      ),
-      child: Column(
-        children: [
-          Expanded(
-            flex: 3,
-            child: Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(10),
-              decoration: const BoxDecoration(color: Colors.white, borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-              child: Hero(
-                tag: wine['name'],
-                child: Image.network(wine['image'], fit: BoxFit.contain, errorBuilder: (c,e,s) => const Icon(Icons.wine_bar, size: 50, color: Colors.grey))
-              )
-            )
-          ),
-          Expanded(
-            flex: 2,
-            child: Padding(
-              padding: const EdgeInsets.all(12.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(wine['name'], style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15), maxLines: 1, overflow: TextOverflow.ellipsis),
-                      Text("${wine['origin']} • ${wine['year']}", style: GoogleFonts.poppins(color: Colors.grey, fontSize: 11))
-                    ]
-                  ),
-                  Text(wine['price'], style: GoogleFonts.poppins(color: Colors.amber[700], fontWeight: FontWeight.bold, fontSize: 16))
-                ]
-              )
-            )
-          )
-        ]
-      ),
-    );
-  }
-}
-
 // ==========================================
 // TELA NOVA: ADMIN ADD WINE (COM CAMPO DE UVA)
 // ==========================================
@@ -857,8 +827,8 @@ class _AdminAddWineScreenState extends State<AdminAddWineScreen> {
       "price": "R\$ ${_priceCtrl.text}",
       "image": _imageCtrl.text.isEmpty ? "https://cdn-icons-png.flaticon.com/512/2405/2405451.png" : _imageCtrl.text,
       "flag": flagUrl,
-      "type": "Tinto",
-      "grapes": _grapeCtrl.text.isEmpty ? "Variadas" : _grapeCtrl.text,
+      "type": "Tinto", // Pode melhorar criando um campo dropdown aqui também
+      "grapes": _grapeCtrl.text.isEmpty ? "Variadas" : _grapeCtrl.text, // Chave 'grapes' para filtro
       "desc": _descCtrl.text.isEmpty ? "Sem descrição." : _descCtrl.text,
     };
 
@@ -978,93 +948,6 @@ class _ReviewCard extends StatelessWidget {
 }
 
 // ==========================================
-// TELA 9: PERFIL (HISTÓRICO REAL DO FIREBASE)
-// ==========================================
-class ProfileScreen extends StatelessWidget {
-  const ProfileScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    final User? user = FirebaseAuth.instance.currentUser;
-    final String userName = user?.displayName ?? "Visitante";
-    final String userEmail = user?.email ?? "sem email";
-
-    return Scaffold(
-      extendBodyBehindAppBar: true,
-      appBar: AppBar(backgroundColor: Colors.transparent, elevation: 0, leading: IconButton(icon: const Icon(Icons.arrow_back_ios, color: Colors.white), onPressed: () => Navigator.pop(context)), title: Text("Meu Perfil", style: GoogleFonts.greatVibes(fontSize: 30, color: Colors.white)), centerTitle: true),
-      body: Stack(
-        children: [
-          Container(height: double.infinity, decoration: const BoxDecoration(image: DecorationImage(image: AssetImage('assets/bg_home.jpg'), fit: BoxFit.cover)), child: Container(color: Colors.black.withOpacity(0.8))),
-          
-          SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 100),
-            child: Column(
-              children: [
-                // Avatar
-                Container(padding: const EdgeInsets.all(4), decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle), child: CircleAvatar(radius: 60, backgroundImage: NetworkImage(SessionService.isAdmin ? "https://i.pinimg.com/736x/ea/58/13/ea58133bb7a0497fa97607730d47343e.jpg" : "https://cdn-icons-png.flaticon.com/512/3135/3135715.png"))),
-                const SizedBox(height: 15),
-                Text(userName, style: GoogleFonts.poppins(fontSize: 22, color: Colors.white, fontWeight: FontWeight.bold)),
-                Text(userEmail, style: GoogleFonts.poppins(fontSize: 14, color: Colors.white54)),
-                
-                const SizedBox(height: 40),
-                Align(alignment: Alignment.centerLeft, child: Text("Meus Pedidos", style: GoogleFonts.poppins(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w600))),
-                const SizedBox(height: 15),
-
-                // LISTA DE PEDIDOS DO FIREBASE
-                if (user == null)
-                  const Text("Faça login para ver seus pedidos.", style: TextStyle(color: Colors.white54))
-                else
-                  StreamBuilder<QuerySnapshot>(
-                    // Busca pedidos onde userId é igual ao meu ID, ordenado por data (descendente)
-                    stream: FirebaseFirestore.instance.collection('orders')
-                        .where('userId', isEqualTo: user.uid)
-                        // .orderBy('date', descending: true) // Nota: Requer índice no Firebase, vamos deixar simples por enquanto
-                        .snapshots(),
-                    builder: (context, snapshot) {
-                      if (snapshot.connectionState == ConnectionState.waiting) return const CircularProgressIndicator(color: Color(0xFF800020));
-                      if (!snapshot.hasData || snapshot.data!.docs.isEmpty) return const Text("Você ainda não fez pedidos.", style: TextStyle(color: Colors.white54));
-
-                      return Column(
-                        children: snapshot.data!.docs.map((doc) {
-                          final data = doc.data() as Map<String, dynamic>;
-                          final items = data['items'] as List<dynamic>;
-                          final firstItem = items[0]; // Pega o primeiro item para mostrar na capa
-                          final total = (data['total'] as num).toDouble();
-                          
-                          return Container(
-                            margin: const EdgeInsets.only(bottom: 15),
-                            padding: const EdgeInsets.all(10),
-                            decoration: BoxDecoration(color: Colors.white.withOpacity(0.1), borderRadius: BorderRadius.circular(15), border: Border.all(color: Colors.white10)),
-                            child: Row(
-                              children: [
-                                // Foto do primeiro vinho
-                                Container(width: 50, height: 70, decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(10)), child: Image.network(firstItem['image'], fit: BoxFit.contain, errorBuilder: (c,e,s) => const Icon(Icons.wine_bar))),
-                                const SizedBox(width: 15),
-                                Expanded(
-                                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                                    Text("${items.length} produto(s)", style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15)),
-                                    Text("Total: R\$ ${total.toStringAsFixed(2)}", style: GoogleFonts.poppins(color: Colors.white70, fontSize: 12)),
-                                    Text("Status: ${data['status']}", style: GoogleFonts.poppins(color: Colors.amber, fontSize: 12)),
-                                  ]),
-                                ),
-                                const Icon(Icons.arrow_forward_ios, color: Colors.white54, size: 14)
-                              ],
-                            ),
-                          );
-                        }).toList(),
-                      );
-                    },
-                  ),
-              ],
-            ),
-          )
-        ],
-      ),
-    );
-  }
-}
-
-// ==========================================
 // TELA 6: CARRINHO (CART SCREEN)
 // ==========================================
 class CartScreen extends StatefulWidget {
@@ -1158,7 +1041,7 @@ class _CartItem extends StatelessWidget {
 }
 
 // ==========================================
-// TELA 7: PAGAMENTO (COM SALVAMENTO REAL)
+// TELA 7: PAGAMENTO (CORRIGIDA - ENVIA O MÉTODO CERTO)
 // ==========================================
 class PaymentScreen extends StatefulWidget {
   const PaymentScreen({super.key});
@@ -1168,7 +1051,7 @@ class PaymentScreen extends StatefulWidget {
 
 class _PaymentScreenState extends State<PaymentScreen> {
   int _selectedMethod = 0;
-  bool _isProcessing = false; // Para mostrar carregando
+  bool _isProcessing = false;
 
   @override
   Widget build(BuildContext context) {
@@ -1184,12 +1067,19 @@ class _PaymentScreenState extends State<PaymentScreen> {
             
             // Botão de Confirmar
             ClipRRect(borderRadius: const BorderRadius.vertical(top: Radius.circular(30)), child: BackdropFilter(filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10), child: Container(padding: const EdgeInsets.all(30), decoration: BoxDecoration(color: Colors.white.withOpacity(0.1), borderRadius: const BorderRadius.vertical(top: Radius.circular(30)), border: Border(top: BorderSide(color: Colors.white.withOpacity(0.2)))), child: SizedBox(width: double.infinity, height: 60, child: ElevatedButton(
-              // AÇÃO DE SALVAR
+              
+              // AÇÃO DE SALVAR CORRIGIDA
               onPressed: (_selectedMethod == 0 || _isProcessing) ? null : () async { 
                 setState(() => _isProcessing = true);
                 
-                // Salva no Firebase
-                await CartService.saveOrder();
+                // 1. Traduz o ID selecionado para Texto
+                String methodText = "Desconhecido";
+                if (_selectedMethod == 1) methodText = "Cartão de Crédito";
+                if (_selectedMethod == 2) methodText = "Pix";
+                if (_selectedMethod == 3) methodText = "Boleto";
+
+                // 2. Envia o texto para a função de salvar
+                await CartService.saveOrder(methodText);
                 
                 if (mounted) {
                   setState(() => _isProcessing = false);
@@ -1247,7 +1137,7 @@ class OrderSuccessScreen extends StatelessWidget {
                 ),
               ),
             ),
-          )
+          ),
         ],
       ),
     );
@@ -1255,8 +1145,234 @@ class OrderSuccessScreen extends StatelessWidget {
 }
 
 // ==========================================
-// WIDGETS AUXILIARES RESTANTES
+// TELA 9: PERFIL (CORRIGIDA: LOGOUT NO FINAL)
 // ==========================================
+class ProfileScreen extends StatelessWidget {
+  const ProfileScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final User? user = FirebaseAuth.instance.currentUser;
+    final String userName = user?.displayName ?? "Visitante";
+    final String userEmail = user?.email ?? "sem email";
+
+    return Scaffold(
+      extendBodyBehindAppBar: true,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: Text("Meu Perfil", style: GoogleFonts.greatVibes(fontSize: 30, color: Colors.white)),
+        centerTitle: true,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.edit_note, color: Colors.white, size: 28),
+            tooltip: "Editar Dados e Endereço",
+            onPressed: () {
+              Navigator.push(context, MaterialPageRoute(builder: (context) => const EditProfileScreen()));
+            },
+          ),
+          const SizedBox(width: 10),
+        ],
+      ),
+      body: Stack(
+        children: [
+          Container(height: double.infinity, decoration: const BoxDecoration(image: DecorationImage(image: AssetImage('assets/bg_home.jpg'), fit: BoxFit.cover)), child: Container(color: Colors.black.withOpacity(0.8))),
+          
+          SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 100),
+            child: Column(
+              children: [
+                // Avatar
+                Container(padding: const EdgeInsets.all(4), decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle), child: CircleAvatar(radius: 60, backgroundImage: NetworkImage(SessionService.isAdmin ? "https://i.pinimg.com/736x/ea/58/13/ea58133bb7a0497fa97607730d47343e.jpg" : "https://cdn-icons-png.flaticon.com/512/3135/3135715.png"))),
+                const SizedBox(height: 15),
+                Text(userName, style: GoogleFonts.poppins(fontSize: 22, color: Colors.white, fontWeight: FontWeight.bold)),
+                Text(userEmail, style: GoogleFonts.poppins(fontSize: 14, color: Colors.white54)),
+                
+                const SizedBox(height: 40),
+                Align(alignment: Alignment.centerLeft, child: Text("Meus Pedidos", style: GoogleFonts.poppins(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w600))),
+                const SizedBox(height: 15),
+
+                // --- LISTA DE PEDIDOS DO FIREBASE ---
+                if (user == null)
+                  const Text("Faça login para ver seus pedidos.", style: TextStyle(color: Colors.white54))
+                else
+                  StreamBuilder<QuerySnapshot>(
+                    stream: FirebaseFirestore.instance
+                        .collection('orders')
+                        .where('userId', isEqualTo: user.uid)
+                        // .orderBy('date', descending: true) // Se der erro de índice, mantenha comentado
+                        .snapshots(),
+                    builder: (context, snapshot) {
+                      if (snapshot.hasError) return const Text("Erro ao carregar pedidos", style: TextStyle(color: Colors.white54));
+                      if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator(color: Color(0xFF800020)));
+                      
+                      final orders = snapshot.data!.docs;
+
+                      if (orders.isEmpty) {
+                        return const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 20),
+                          child: Text("Você ainda não fez pedidos.", style: TextStyle(color: Colors.white54)),
+                        );
+                      }
+
+                      return ListView.builder(
+                        shrinkWrap: true, // Importante!
+                        physics: const NeverScrollableScrollPhysics(), // Importante!
+                        itemCount: orders.length,
+                        itemBuilder: (context, index) {
+                          final doc = orders[index];
+                          final data = doc.data() as Map<String, dynamic>;
+                          
+                          final items = data['items'] as List<dynamic>? ?? [];
+                          final total = (data['total'] as num).toDouble();
+                          final status = data['status'] ?? "Aguardando";
+                          final firstImage = items.isNotEmpty ? items[0]['image'] : '';
+
+                          return GestureDetector(
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => OrderDetailsScreen(
+                                    orderId: doc.id,
+                                    orderData: data,
+                                  ),
+                                ),
+                              );
+                            },
+                            child: Container(
+                              margin: const EdgeInsets.only(bottom: 15),
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF1E1E1E),
+                                borderRadius: BorderRadius.circular(15),
+                                border: Border.all(color: Colors.white10),
+                              ),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    width: 50, height: 70, 
+                                    decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(10)),
+                                    child: Image.network(firstImage, fit: BoxFit.contain, errorBuilder: (c,e,s) => const Icon(Icons.wine_bar))
+                                  ),
+                                  const SizedBox(width: 15),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start, 
+                                      children: [
+                                        Text("Pedido #${doc.id.substring(0, 5).toUpperCase()}", style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15)),
+                                        Text("${items.length} garrafa(s) • R\$ ${total.toStringAsFixed(2)}", style: GoogleFonts.poppins(color: Colors.white70, fontSize: 12)),
+                                        const SizedBox(height: 5),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                          decoration: BoxDecoration(color: status == 'Entregue' ? Colors.green.withOpacity(0.2) : Colors.amber.withOpacity(0.2), borderRadius: BorderRadius.circular(4)),
+                                          child: Text(status, style: GoogleFonts.poppins(color: status == 'Entregue' ? Colors.green : Colors.amber, fontSize: 10, fontWeight: FontWeight.bold)),
+                                        ),
+                                      ]
+                                    ),
+                                  ),
+                                  const Icon(Icons.arrow_forward_ios, color: Colors.white54, size: 14)
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      );
+                    },
+                  ),
+
+                // --- BOTÃO DE LOGOUT (AGORA FORA DO LOOP E NO FINAL DA PÁGINA) ---
+                const SizedBox(height: 40),
+                SizedBox(
+                  width: double.infinity,
+                  height: 50,
+                  child: OutlinedButton.icon(
+                    onPressed: () async {
+                      await FirebaseAuth.instance.signOut();
+                      CartService.clearCart();
+                      if (context.mounted) {
+                        Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (context) => const WelcomeScreen()), (route) => false);
+                      }
+                    },
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: Colors.redAccent, width: 1),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                    ),
+                    icon: const Icon(Icons.logout, color: Colors.redAccent),
+                    label: const Text("SAIR DA CONTA", style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold, letterSpacing: 1.2)),
+                  ),
+                ),
+                const SizedBox(height: 30),
+              ],
+            ),
+          )
+        ],
+      ),
+    );
+  }
+}
+// ==========================================
+// WIDGETS AUXILIARES COMPARTILHADOS
+// ==========================================
+
+// 1. O card que exibe o vinho na Grid da Home
+class _WineCard extends StatelessWidget {
+  final Map<String, dynamic> wine;
+  const _WineCard({required this.wine});
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFF1E1E1E),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.white.withOpacity(0.05)),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.5), blurRadius: 8, offset: const Offset(0, 4))]
+      ),
+      child: Column(
+        children: [
+          Expanded(
+            flex: 3,
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(10),
+              decoration: const BoxDecoration(color: Colors.white, borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+              child: Hero(
+                tag: wine['name'],
+                child: Image.network(wine['image'], fit: BoxFit.contain, errorBuilder: (c,e,s) => const Icon(Icons.wine_bar, size: 50, color: Colors.grey))
+              )
+            )
+          ),
+          Expanded(
+            flex: 2,
+            child: Padding(
+              padding: const EdgeInsets.all(12.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(wine['name'], style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15), maxLines: 1, overflow: TextOverflow.ellipsis),
+                      Text("${wine['origin']} • ${wine['year']}", style: GoogleFonts.poppins(color: Colors.grey, fontSize: 11))
+                    ]
+                  ),
+                  Text(wine['price'], style: GoogleFonts.poppins(color: Colors.amber[700], fontWeight: FontWeight.bold, fontSize: 16))
+                ]
+              )
+            )
+          )
+        ]
+      ),
+    );
+  }
+}
+
+// 2. Bolinhas de informação na tela de detalhes
 class _InfoBadge extends StatelessWidget {
   final String? image; final IconData? icon; final String label; final Color? color;
   const _InfoBadge({this.image, this.icon, required this.label, this.color});
@@ -1265,6 +1381,8 @@ class _InfoBadge extends StatelessWidget {
     return Column(children: [Container(width: 40, height: 40, decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: Colors.grey.shade300)), child: image != null ? ClipOval(child: Image.network(image!, fit: BoxFit.cover, errorBuilder: (c,e,s) => const Icon(Icons.public, color: Colors.grey))) : Icon(icon, color: color, size: 20)), const SizedBox(height: 4), Text(label, style: GoogleFonts.poppins(fontSize: 9, color: Colors.black87, fontWeight: FontWeight.w500), textAlign: TextAlign.center)]);
   }
 }
+
+// 3. Campo de Texto estilo "Vidro" (Usado no Login, Signup e Admin)
 class _GlassInput extends StatelessWidget {
   final String label;
   final bool isPassword;
@@ -1274,7 +1392,7 @@ class _GlassInput extends StatelessWidget {
   final bool readOnly;
   final TextInputType keyboardType;
 
-  // Removi o 'onChanged' daqui pois não estamos usando
+  // REMOVIDO: super.key
   const _GlassInput({
     required this.label, 
     this.isPassword = false, 
@@ -1300,7 +1418,6 @@ class _GlassInput extends StatelessWidget {
         readOnly: readOnly, 
         onTap: onTap, 
         keyboardType: keyboardType,
-        // Removi a chamada do onChanged aqui também
         style: const TextStyle(color: Colors.white),
         decoration: InputDecoration(
           hintText: label, 
@@ -1315,6 +1432,8 @@ class _GlassInput extends StatelessWidget {
     );
   }
 }
+
+// 4. Botão Social (Login)
 class _SocialButton extends StatelessWidget {
   final IconData icon; final Color color; final Color iconColor; final VoidCallback? onTap;
   const _SocialButton({required this.icon, required this.color, required this.iconColor, this.onTap});
@@ -1323,7 +1442,6 @@ class _SocialButton extends StatelessWidget {
     return GestureDetector(onTap: onTap, child: Container(width: 55, height: 55, decoration: BoxDecoration(color: color, shape: BoxShape.circle), child: Center(child: FaIcon(icon, color: iconColor, size: 26))));
   }
 }
-// Cole isso no final do arquivo main.dart, fora da última chave "}"
 
 class _PaymentOptionRow extends StatelessWidget {
   final IconData icon;
@@ -1331,6 +1449,7 @@ class _PaymentOptionRow extends StatelessWidget {
   final bool isSelected;
   final VoidCallback onTap;
 
+  // REMOVIDO: super.key
   const _PaymentOptionRow({
     required this.icon,
     required this.label,

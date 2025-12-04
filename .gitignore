@@ -1,12 +1,33 @@
-/build
-/.dart_tool
 /.idea
-.flutter-plugins
-.flutter-plugins-dependencies
 .metadata
-.packages
 /android/.gradle
 /android/app/build
 /ios/.symlinks
 /ios/Pods
 pubspec.lock
+
+# Arquivos do Flutter/Dart (Obrigatório ignorar)
+/build/
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+
+# Arquivos de IDE (Obrigatório ignorar para não dar conflito com o PC do seu amigo)
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+
+# Arquivos do Mac e Windows (Lixo do sistema)
+.DS_Store
+Thumbs.db
+
+# --- FIREBASE E SEGURANÇA ---
+
+android/app/google-services.json
+ios/Runner/GoogleService-Info.plist
+lib/firebase_options.dart

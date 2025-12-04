@@ -38,7 +38,7 @@ class SessionService {
 }
 
 // ==========================================
-// SERVIÇO DE VINHOS
+// SERVIÇO DE VINHOS (CORRIGIDO)
 // ==========================================
 class WineService {
   static List<Map<String, dynamic>> wines = [
@@ -51,9 +51,14 @@ class WineService {
       "grapes": "Touriga Nacional",
       "desc": "O Barca Velha 2011 é um ícone português. Encorpado, complexo e elegante. Apresenta notas de frutas vermelhas e especiarias.",
       "price": "R\$ 7.495",
-      "image": "https://garrafeiranacional.com/media/catalog/product/cache/1/image/9df78eab33525d08d6e5fb8d27136e95/3/0/3010185.png"
+      "image": "https://garrafeiranacional.com/media/catalog/product/cache/1/image/9df78eab33525d08d6e5fb8d27136e95/3/0/3010185.png",
+      // LISTA DE AVALIAÇÕES
+      "reviews": [
+        {"name": "Carlos M.", "stars": 5, "comment": "Espetacular! Vale cada centavo.", "date": "Há 2 dias"},
+        {"name": "Ana Souza", "stars": 4, "comment": "Muito bom, mas precisa respirar.", "date": "Há 1 semana"}
+      ]
     },
-     {
+    {
       "name": "Catena Zapata",
       "origin": "Argentina",
       "year": "2019",
@@ -62,7 +67,10 @@ class WineService {
       "grapes": "Malbec",
       "desc": "O grande ícone argentino dos Andes. Produzido em grandes altitudes, possui sabor intenso de ameixa e tabaco.",
       "price": "R\$ 1.150",
-      "image": "https://images.vivino.com/thumbs/f_282x3hTi2s1h8oX1_SJA_pb_x960.png"
+      "image": "https://images.vivino.com/thumbs/f_282x3hTi2s1h8oX1_SJA_pb_x960.png",
+      "reviews": [
+        {"name": "Roberto", "stars": 5, "comment": "O melhor Malbec que já tomei.", "date": "Ontem"}
+      ]
     },
     {
       "name": "Château Petrus",
@@ -73,11 +81,14 @@ class WineService {
       "grapes": "Merlot",
       "desc": "Um dos vinhos mais caros e famosos do mundo de Bordeaux.",
       "price": "R\$ 51.748",
-      "image": "https://images.vivino.com/thumbs/rORMIo9hR0Oqg1lC0WJcZw_pb_x960.png"
-    },
+      "image": "https://images.vivino.com/thumbs/rORMIo9hR0Oqg1lC0WJcZw_pb_x960.png",
+      "reviews": [] // Lista vazia para não dar erro
+    }
   ];
 
   static void addWine(Map<String, dynamic> newWine) {
+    // Garante que o novo vinho tenha lista de reviews vazia para não quebrar
+    newWine['reviews'] = [];
     wines.add(newWine);
   }
 
@@ -85,6 +96,7 @@ class WineService {
     wines.remove(wine);
   }
 
+  // Mapa de Bandeiras
   static final Map<String, String> _flagMap = {
     "brasil": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/05/Flag_of_Brazil.svg/256px-Flag_of_Brazil.svg.png",
     "brazil": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/05/Flag_of_Brazil.svg/256px-Flag_of_Brazil.svg.png",
@@ -723,11 +735,52 @@ class _AdminAddWineScreenState extends State<AdminAddWineScreen> {
 }
 
 // ==========================================
-// TELA 5: PRODUCT DETAIL (COM AVALIAÇÕES)
+// TELA 5: PRODUCT DETAIL (COM AVALIAÇÃO INTERATIVA)
 // ==========================================
-class ProductDetailScreen extends StatelessWidget {
+class ProductDetailScreen extends StatefulWidget {
   final Map<String, dynamic> wine;
   const ProductDetailScreen({super.key, required this.wine});
+
+  @override
+  State<ProductDetailScreen> createState() => _ProductDetailScreenState();
+}
+
+class _ProductDetailScreenState extends State<ProductDetailScreen> {
+  // Para atualizar a tela quando adicionar review
+  late List<dynamic> reviews;
+
+  @override
+  void initState() {
+    super.initState();
+    // Garante que a lista de reviews existe, se não, cria vazia
+    reviews = widget.wine['reviews'] ?? [];
+  }
+
+  // Função para abrir o modal de escrever avaliação
+  void _openWriteReview() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true, // Para o teclado não cobrir
+      backgroundColor: Colors.transparent,
+      builder: (context) => _ReviewInputModal(
+        onSubmit: (int stars, String comment) {
+          setState(() {
+            // Adiciona na lista local e visual
+            reviews.insert(0, {
+              "name": "Você", // Simula o usuário logado
+              "stars": stars,
+              "comment": comment,
+              "date": "Agora mesmo"
+            });
+            // Salva no objeto original do vinho (Memória)
+            widget.wine['reviews'] = reviews;
+          });
+          Navigator.pop(context); // Fecha o modal
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Avaliação enviada com sucesso!"), backgroundColor: Colors.green));
+        },
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -753,11 +806,11 @@ class ProductDetailScreen extends StatelessWidget {
                       child: Padding(
                         padding: const EdgeInsets.all(20.0),
                         child: Hero(
-                          tag: wine['name'],
+                          tag: widget.wine['name'],
                           child: Container(
                             padding: const EdgeInsets.all(15),
                             decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(30), border: Border.all(color: Colors.amber, width: 3), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 15, offset: const Offset(0, 8))]),
-                            child: Image.network(wine['image'], fit: BoxFit.contain, errorBuilder: (c,e,s) => const Icon(Icons.wine_bar, size: 100)),
+                            child: Image.network(widget.wine['image'], fit: BoxFit.contain, errorBuilder: (c,e,s) => const Icon(Icons.wine_bar, size: 100)),
                           ),
                         ),
                       ),
@@ -765,31 +818,11 @@ class ProductDetailScreen extends StatelessWidget {
                     Positioned(
                       right: 20, top: 20,
                       child: Column(
-                      children: [
-                      // 1. Bandeira e País (Dinâmico: SEM const)
-                          _InfoBadge(
-                           image: wine['flag']?.toString(), 
-                          label: wine['origin'].toString()
-                                    ),
-                        
-                          const SizedBox(height: 15),
-                          
-                          // 2. Tipo Tinto (Fixo: COM const)
-                          const _InfoBadge(icon: Icons.wine_bar, label: "Tinto", color: Colors.purple),
-                          
-                          const SizedBox(height: 15),
-                          
-                          // 3. Uva (Dinâmico: SEM const)
-                          _InfoBadge(
-                            icon: Icons.grain, 
-                            label: wine['grapes']?.toString() ?? "Uvas", 
-                            color: Colors.grey
-                          ),
-                          
-                          const SizedBox(height: 15),
-                          
-                          // 4. Tamanho (Fixo: COM const)
-                          const _InfoBadge(icon: Icons.local_drink, label: "750ml", color: Colors.black),
+                        children: [
+                          _InfoBadge(image: widget.wine['flag']?.toString(), label: widget.wine['origin'].toString()), 
+                          const SizedBox(height: 15), const _InfoBadge(icon: Icons.wine_bar, label: "Tinto", color: Colors.purple), 
+                          const SizedBox(height: 15), _InfoBadge(icon: Icons.grain, label: widget.wine['grapes']?.toString() ?? "Uvas", color: Colors.grey), 
+                          const SizedBox(height: 15), const _InfoBadge(icon: Icons.local_drink, label: "750ml", color: Colors.black),
                         ],
                       ),
                     )
@@ -804,43 +837,44 @@ class ProductDetailScreen extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(wine['name'], style: GoogleFonts.poppins(fontSize: 32, fontWeight: FontWeight.bold, color: Colors.black, shadows: [Shadow(color: Colors.black38, offset: const Offset(2, 2), blurRadius: 4)])),
+                        Text(widget.wine['name'], style: GoogleFonts.poppins(fontSize: 32, fontWeight: FontWeight.bold, color: Colors.black, shadows: [Shadow(color: Colors.black38, offset: const Offset(2, 2), blurRadius: 4)])),
                         const SizedBox(height: 15),
                         
-                        // DESCRIÇÃO
                         Container(
                           padding: const EdgeInsets.all(15),
                           decoration: BoxDecoration(color: const Color(0xFFF5F5F5), border: Border.all(color: Colors.grey.shade400, width: 1.5), borderRadius: BorderRadius.circular(15)),
-                          child: Text(wine['desc'], textAlign: TextAlign.justify, style: GoogleFonts.poppins(fontSize: 13, color: Colors.grey[800], height: 1.6)),
+                          child: Text(widget.wine['desc'], textAlign: TextAlign.justify, style: GoogleFonts.poppins(fontSize: 13, color: Colors.grey[800], height: 1.6)),
                         ),
                         
                         const SizedBox(height: 30),
                         
-                        // --- SEÇÃO DE AVALIAÇÕES (NOVO!) ---
+                        // --- CABEÇALHO DE AVALIAÇÕES ---
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text("Avaliações (4.8)", style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87)),
-                            Text("Ver tudo", style: GoogleFonts.poppins(fontSize: 12, color: const Color(0xFF800020), fontWeight: FontWeight.w600)),
+                            Text("Avaliações (${reviews.length})", style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87)),
+                            // BOTÃO DE AVALIAR
+                            GestureDetector(
+                              onTap: _openWriteReview,
+                              child: Text("+ Avaliar", style: GoogleFonts.poppins(fontSize: 14, color: const Color(0xFF800020), fontWeight: FontWeight.bold)),
+                            ),
                           ],
                         ),
                         const SizedBox(height: 15),
                         
-                        // Card de Avaliação 1
-                        _ReviewCard(
-                          name: "Carlos Mendes",
-                          stars: 5,
-                          comment: "Vinho espetacular! Encorpado e desce redondo. Chegou super rápido.",
-                          date: "2 dias atrás",
-                        ),
-                        
-                        // Card de Avaliação 2
-                        _ReviewCard(
-                          name: "Fernanda Souza",
-                          stars: 4,
-                          comment: "Ótimo custo benefício, mas recomendo deixar respirar um pouco antes de servir.",
-                          date: "1 semana atrás",
-                        ),
+                        // --- LISTA DE REVIEWS DINÂMICA ---
+                        if (reviews.isEmpty)
+                          Padding(
+                            padding: const EdgeInsets.all(20.0),
+                            child: Center(child: Text("Seja o primeiro a avaliar!", style: GoogleFonts.poppins(color: Colors.grey))),
+                          )
+                        else
+                          ...reviews.map((rev) => _ReviewCard(
+                            name: rev['name'],
+                            stars: rev['stars'],
+                            comment: rev['comment'],
+                            date: rev['date'],
+                          )).toList(),
                         
                         const SizedBox(height: 30),
                       ],
@@ -848,7 +882,8 @@ class ProductDetailScreen extends StatelessWidget {
                   ),
                 ),
               ),
-              Container(padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 20), decoration: BoxDecoration(color: Colors.white, boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, -5))]), child: Row(children: [Container(padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 10), decoration: BoxDecoration(color: const Color(0xFF1E1E1E), borderRadius: BorderRadius.circular(8)), child: Text(wine['price'], style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18))), const SizedBox(width: 15), Expanded(child: OutlinedButton.icon(onPressed: () { CartService.addItem(wine); ScaffoldMessenger.of(context).showSnackBar(SnackBar(backgroundColor: const Color(0xFF800020), content: Text("${wine['name']} adicionado!", style: GoogleFonts.poppins(color: Colors.white)), duration: const Duration(seconds: 1))); }, icon: const Icon(Icons.add, color: Colors.black), label: const Icon(Icons.shopping_cart_outlined, color: Colors.black), style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 12), side: const BorderSide(color: Colors.black, width: 1), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)))))])) 
+              // Botão Adicionar Carrinho (Fixo no Rodapé)
+              Container(padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 20), decoration: BoxDecoration(color: Colors.white, boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, -5))]), child: Row(children: [Container(padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 10), decoration: BoxDecoration(color: const Color(0xFF1E1E1E), borderRadius: BorderRadius.circular(8)), child: Text(widget.wine['price'], style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18))), const SizedBox(width: 15), Expanded(child: OutlinedButton.icon(onPressed: () { CartService.addItem(widget.wine); ScaffoldMessenger.of(context).showSnackBar(SnackBar(backgroundColor: const Color(0xFF800020), content: Text("${widget.wine['name']} adicionado!", style: GoogleFonts.poppins(color: Colors.white)), duration: const Duration(seconds: 1))); }, icon: const Icon(Icons.add, color: Colors.black), label: const Icon(Icons.shopping_cart_outlined, color: Colors.black), style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 12), side: const BorderSide(color: Colors.black, width: 1), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)))))])) 
             ],
           ),
         ),
@@ -857,7 +892,85 @@ class ProductDetailScreen extends StatelessWidget {
   }
 }
 
-// Widget Auxiliar para o Card de Comentário
+// Widget do Modal de Escrever Review
+class _ReviewInputModal extends StatefulWidget {
+  final Function(int, String) onSubmit;
+  const _ReviewInputModal({required this.onSubmit});
+
+  @override
+  State<_ReviewInputModal> createState() => _ReviewInputModalState();
+}
+
+class _ReviewInputModalState extends State<_ReviewInputModal> {
+  int _rating = 5;
+  final TextEditingController _commentCtrl = TextEditingController();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.fromLTRB(20, 20, 20, MediaQuery.of(context).viewInsets.bottom + 20),
+      decoration: const BoxDecoration(
+        color: Color(0xFF1E1E1E), // Fundo Escuro Premium
+        borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey, borderRadius: BorderRadius.circular(2))),
+          const SizedBox(height: 20),
+          Text("O que achou do vinho?", style: GoogleFonts.greatVibes(fontSize: 30, color: Colors.white)),
+          const SizedBox(height: 20),
+          // Estrelas Clicáveis
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: List.generate(5, (index) {
+              return IconButton(
+                onPressed: () => setState(() => _rating = index + 1),
+                icon: Icon(
+                  index < _rating ? Icons.star : Icons.star_border,
+                  color: Colors.amber,
+                  size: 35,
+                ),
+              );
+            }),
+          ),
+          const SizedBox(height: 20),
+          // Input de Comentário
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 15),
+            decoration: BoxDecoration(color: Colors.white.withOpacity(0.1), borderRadius: BorderRadius.circular(15)),
+            child: TextField(
+              controller: _commentCtrl,
+              maxLines: 3,
+              style: const TextStyle(color: Colors.white),
+              decoration: const InputDecoration(
+                hintText: "Escreva sua opinião...",
+                hintStyle: TextStyle(color: Colors.white54),
+                border: InputBorder.none,
+              ),
+            ),
+          ),
+          const SizedBox(height: 20),
+          SizedBox(
+            width: double.infinity,
+            height: 50,
+            child: ElevatedButton(
+              onPressed: () {
+                if (_commentCtrl.text.isNotEmpty) {
+                  widget.onSubmit(_rating, _commentCtrl.text);
+                }
+              },
+              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF800020)),
+              child: const Text("ENVIAR AVALIAÇÃO", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            ),
+          )
+        ],
+      ),
+    );
+  }
+}
+
+// Widget do Card de Comentário (Visualização)
 class _ReviewCard extends StatelessWidget {
   final String name;
   final int stars;

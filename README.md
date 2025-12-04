@@ -10,9 +10,9 @@ O **TaninoWine** é uma aplicação completa de e-commerce para venda de vinhos 
 
 Este aplicativo está sendo desenvolvido como parte do curso de **Análise e Desenvolvimento de Sistemas**.
 
-* **Desenvolvedor:** LuffyBaiano (João Marcelo)
+* **Desenvolvedor:** João Marcelo ( LuffyBaiano ) e Kaique Dias
 * **Idealização:** Taiane Leite
-* **Status Atual:** 🚧 Em Construção (MVP Funcional)
+* **Status Atual:** 🚧 Em Construção ( MVP Funcional )
 
 ---
 
@@ -22,6 +22,9 @@ Este aplicativo está sendo desenvolvido como parte do curso de **Análise e Des
 * Filtros Avançados (País, Uva, Preço e Nome)
 * Modo Administrador (Gestão de Catálogo)
 * Simulação de Pagamento e Pedido
+* Perfil de usuario
+* avaliações de vinhos
+* fotos de perfil
 
 ---
 *Projeto criado com muito Energético e no caso de taiane vinho kkkk!* 🍷
